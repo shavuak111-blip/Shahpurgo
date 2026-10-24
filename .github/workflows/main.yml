@@ -1,39 +1,52 @@
-name: Deploy ShahpurGo
+name: Build ShahpurGo APK
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+  push:
+    paths:
+      - "*.zip"
+      - ".github/workflows/main.yml"
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+      - name: Find and extract Android project
+        run: |
+          ZIP_FILE=$(find . -maxdepth 1 -type f -iname "*.zip" | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "Android project ZIP file not found"
+            exit 1
+          fi
+          mkdir android-project
+          unzip "$ZIP_FILE" -d android-project
 
-      - name: Upload website files
-        uses: actions/upload-pages-artifact@v3
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
-          path: .
+          distribution: temurin
+          java-version: "17"
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Build debug APK
+        working-directory: android-project
+        run: |
+          gradle assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShahpurGo-APK
+          path: android-project/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
