@@ -1,0 +1,124 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 3 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isPlatformOwner() {
+      return isSignedIn() && (request.auth.token.email == 'shavuak111@gmail.com');
+    }
+
+    function isValidOrder(data) {
+      return data.orderId is string && data.orderId.size() >= 3 && data.orderId.size() <= 128 &&
+             data.customerId is string && data.customerId.size() >= 1 && data.customerId.size() <= 128 &&
+             data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 100 &&
+             data.customerPhone is string && data.customerPhone.size() >= 5 && data.customerPhone.size() <= 25 &&
+             data.deliveryAddress is string && data.deliveryAddress.size() >= 3 && data.deliveryAddress.size() <= 300 &&
+             (!('landmark' in data) || (data.landmark is string && data.landmark.size() <= 150)) &&
+             (!('itemsSummary' in data) || (data.itemsSummary is string && data.itemsSummary.size() <= 1000)) &&
+             (!('itemsCount' in data) || (data.itemsCount is int && data.itemsCount >= 0)) &&
+             (data.totalAmount is number && data.totalAmount >= 0) &&
+             (data.status in ['PLACED', 'ACCEPTED', 'CONFIRMED', 'PACKING', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED']) &&
+             (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod.size() <= 50)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 300));
+    }
+
+    function isValidProduct(data) {
+      return data.productId is string && data.productId.size() >= 3 && data.productId.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 1000)) &&
+             data.category is string && data.category.size() >= 2 && data.category.size() <= 50 &&
+             (data.sellingPrice is number && data.sellingPrice >= 0) &&
+             (!('originalPrice' in data) || (data.originalPrice is number && data.originalPrice >= 0)) &&
+             (data.stockQuantity is int && data.stockQuantity >= 0) &&
+             data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 50 &&
+             data.isAvailable is bool &&
+             data.shopId is string && data.shopId.size() >= 2 && data.shopId.size() <= 100 &&
+             (!('shopName' in data) || (data.shopName is string && data.shopName.size() <= 150)) &&
+             (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 2000)) &&
+             data.adminUid is string && data.adminUid.size() >= 1 && data.adminUid.size() <= 128 &&
+             (!('adminEmail' in data) || (data.adminEmail is string && data.adminEmail.size() <= 150));
+    }
+
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && (existing().customerId == request.auth.uid || request.auth.token.email != null);
+
+      allow list: if isSignedIn() && (request.auth.token.email != null || request.auth.uid != null);
+
+      allow create: if isSignedIn() &&
+                    isValidId(orderId) &&
+                    incoming().orderId == orderId &&
+                    incoming().customerId == request.auth.uid &&
+                    incoming().createdAt is timestamp &&
+                    (incoming().status in ['PLACED', 'ACCEPTED', 'CONFIRMED']) &&
+                    isValidOrder(incoming());
+
+      allow update: if isSignedIn() &&
+                    isValidId(orderId) &&
+                    incoming().orderId == existing().orderId &&
+                    incoming().customerId == existing().customerId &&
+                    incoming().createdAt == existing().createdAt &&
+                    isValidOrder(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt', 'notes', 'cancellationReason', 'rating', 'review']);
+
+      allow delete: if false;
+    }
+
+    match /products/{productId} {
+      // Products can be publicly read by shoppers and merchants
+      allow get, list: if true;
+
+      // Shop admins can create products for their shop; platform owner can create for any shop
+      allow create: if isSignedIn() &&
+                    isValidId(productId) &&
+                    incoming().productId == productId &&
+                    (incoming().adminUid == request.auth.uid || isPlatformOwner()) &&
+                    incoming().createdAt is timestamp &&
+                    isValidProduct(incoming());
+
+      // Shop admins can update only their own products; platform owner can update all
+      allow update: if isSignedIn() &&
+                    isValidId(productId) &&
+                    incoming().productId == existing().productId &&
+                    (existing().adminUid == request.auth.uid || isPlatformOwner()) &&
+                    incoming().createdAt == existing().createdAt &&
+                    isValidProduct(incoming());
+
+      // Shop admins can delete only their own products; platform owner can delete all
+      allow delete: if isSignedIn() &&
+                    (existing().adminUid == request.auth.uid || isPlatformOwner());
+    }
+
+    match /shops/{shopId} {
+      allow get, list: if true;
+      allow create, update: if isSignedIn() && (isPlatformOwner() || existing().adminUid == request.auth.uid);
+      allow delete: if isPlatformOwner();
+    }
+
+    match /categories/{categoryId} {
+      allow get, list: if true;
+      allow create, update, delete: if isPlatformOwner();
+    }
+
+    match /audit_logs/{logId} {
+      allow get, list: if isPlatformOwner();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+  }
+}

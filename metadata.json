@@ -1,0 +1,6 @@
+{
+  "name": "ShahpurGo",
+  "description": "Shahpur Ka Apna Delivery App - Fast local grocery & daily essentials delivery in Shahpur, Kangra, Himachal Pradesh.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,159 @@
+{
+  "entities": {
+    "Order": {
+      "title": "Order",
+      "description": "A customer order in the ShahpurGo delivery service",
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "description": "Unique order identifier"
+        },
+        "customerId": {
+          "type": "string",
+          "description": "Unique user ID of customer"
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Customer contact full name"
+        },
+        "customerPhone": {
+          "type": "string",
+          "description": "Customer contact mobile phone number"
+        },
+        "deliveryAddress": {
+          "type": "string",
+          "description": "Detailed delivery address in Kangra/Shahpur area"
+        },
+        "landmark": {
+          "type": "string",
+          "description": "Nearby landmark e.g. Near Bus Stand, Chambi Chowk"
+        },
+        "itemsSummary": {
+          "type": "string",
+          "description": "Summary string of grocery items"
+        },
+        "itemsCount": {
+          "type": "integer",
+          "description": "Total count of items"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total order amount in Indian Rupees (INR)"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PLACED", "PACKING", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"],
+          "description": "Current order fulfillment status"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment mode e.g. COD or UPI"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Special delivery instructions"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of order placement"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of latest status update"
+        }
+      },
+      "required": ["orderId", "customerId", "customerName", "customerPhone", "deliveryAddress", "totalAmount", "status", "createdAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "A catalog product listed by a merchant shop on ShahpurGo",
+      "type": "object",
+      "properties": {
+        "productId": {
+          "type": "string",
+          "description": "Unique product SKU identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Product display name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed product description"
+        },
+        "category": {
+          "type": "string",
+          "description": "Product category code e.g. GROCERY, FOOD, RESTAURANTS, FRUITS, VEGETABLES, DAIRY, DRINKS, HOUSEHOLD, FASHION, ELECTRONICS, STATIONERY, HARDWARE"
+        },
+        "sellingPrice": {
+          "type": "number",
+          "description": "Selling price in INR"
+        },
+        "originalPrice": {
+          "type": "number",
+          "description": "Original MRP in INR"
+        },
+        "stockQuantity": {
+          "type": "integer",
+          "description": "Current available inventory quantity"
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit of measurement e.g. 1 kg, 500 g, 1 pc"
+        },
+        "isAvailable": {
+          "type": "boolean",
+          "description": "Availability toggle for customers"
+        },
+        "shopId": {
+          "type": "string",
+          "description": "Identifier of the vendor shop that owns this product"
+        },
+        "shopName": {
+          "type": "string",
+          "description": "Display name of the vendor shop"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Storage or local URI for product photo"
+        },
+        "adminUid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the shop admin who created the product"
+        },
+        "adminEmail": {
+          "type": "string",
+          "description": "Email address of the shop admin"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when product was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when product was last edited"
+        }
+      },
+      "required": ["productId", "name", "category", "sellingPrice", "stockQuantity", "unit", "isAvailable", "shopId", "adminUid"]
+    }
+  },
+  "firestore": {
+    "/orders/{orderId}": {
+      "schema": {
+        "$ref": "#/entities/Order"
+      },
+      "description": "Real-time incoming customer orders observed and managed by the Store Admin Dashboard"
+    },
+    "/products/{productId}": {
+      "schema": {
+        "$ref": "#/entities/Product"
+      },
+      "description": "Multi-vendor catalog products managed by authorized shop admins and the platform owner"
+    }
+  }
+}
